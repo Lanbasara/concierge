@@ -1,75 +1,104 @@
 # Concierge — Claude Code 秘书层
 
-一个 Claude Code 插件，给你的 AI 配一个"秘书"：双向翻译输入与输出，让对话更高效。
+一个 Claude Code 插件。给你的 AI 配一个**真秘书**：不替它说话，但在它说完之后，独立做一份**结论 / 建议 / TL;DR** 三段式简报。
 
-## 为什么需要这个
+## 设计哲学
 
-- **输入侧**：你的表达习惯不一定最能激活 AI。Claude 4.x 起字面执行指令，含糊的提示直接劣化结果。
-- **输出侧**：AI 倾向冗长、铺垫、列表蔓延 — 而人类工作记忆只有 ~4 chunk，扫读优先于精读。两边一错配，就是"AI 阅读疲劳"。
+不当"风格警察"。秘书的工作是**保护老板的注意力**，不是规定 AI 怎么说话。所以 v0.3.0 起：
 
-Concierge 不修改模型本身，只在会话两端加一层"翻译"。
+- **不再强制 "答案前置"** — autoregressive 模型的思考发生在 token 流里，强制结论前置等于切断推理链
+- **不再强制 "凡多选必推荐"** — 有些问题真没有清晰胜者，让 AI 保留诚实
+- **Claude 的原始输出 100% 不被修改**
+- **简报由独立 LLM 调用生成**（你配置的 endpoint + model），追加在 Claude 回复之后作为独立 Line
 
-## 当前版本：v0.2.0（双向拦截）
+## 架构（v0.3.0）
 
-三层 hook 协同工作：
-
-| Hook | 时机 | 作用 |
-|-----|-----|-----|
-| `SessionStart` | 会话启动 | 注入「秘书契约」，让 Claude 自带认知友好行为 |
-| `UserPromptSubmit` | 用户提交后、Claude 看到前 | 评估意图清晰度，给 Claude 注入"内部解读"小抄 |
-| `Stop` | Claude 准备结束本轮 | 按认知科学检查表评估输出，不达标 block 返工 |
-
-三份 prompt 都是可读 markdown，放在 `prompts/` 下，你可以自由编辑：
-
-- [`prompts/secretary-contract.md`](prompts/secretary-contract.md) — 秘书契约
-- [`prompts/intent-clarifier.md`](prompts/intent-clarifier.md) — 入口意图澄清器
-- [`prompts/cognitive-guardian.md`](prompts/cognitive-guardian.md) — 出口认知守门员
-
-修改后运行 `bash scripts/sync-prompts.sh` 把后两份同步到 `hooks/hooks.json`（契约文件被 SessionStart hook 在运行时直接读取，无需同步）。
+| Hook | 作用 | 类型 | 对 Claude 推理的影响 |
+|------|------|------|-------------------|
+| `SessionStart` | 注入轻量秘书契约（信息密度、列表大小等低成本规则）+ 首次配置提示 | command | 极小 |
+| `UserPromptSubmit` | 含糊提示时给 Claude 注入"内部解读"备忘 | prompt | 0（纯增益） |
+| `Stop` | **旁路简报** — 调你的 LLM endpoint 生成 3 段简报，用 full-schema systemMessage 渲染 | command | 0（不动 Claude 输出） |
 
 ## 安装
 
-把这个目录作为一个本地 Claude Code 插件加载（具体方式见 [docs/install.md](docs/install.md)），或通过 marketplace 安装。
+通过 marketplace：
+
+```
+/plugins → 选 lanbasara → 找 concierge → Install → 重启会话
+```
+
+首次会话开始时 Claude 会提示运行 `/sec-setup` 配置 API。
+
+## 配置（一次性）
+
+```
+/sec-setup
+```
+
+依次问：
+
+1. 是否启用秘书简报？（跳过会写 `disabled: true`，下次不再问）
+2. API base URL（OpenAI / DeepSeek / OpenRouter / 自填）
+3. API key（直接发到对话里，会写入 `~/.concierge/config.json` 权限 600）
+4. Model 名称
+
+写入后 **重启会话** 让 Stop hook 拉取新配置。
+
+## 手动调用
+
+```
+/sec-brief
+```
+
+随时调用 — 把上一条 Claude 回复压成简报。等同于 Stop hook 自动做的事，但你主动触发。
 
 ## 临时关闭
 
-- 全局关闭：`touch ~/.concierge-mute`
-- 仅本项目关闭：在项目根目录 `touch .concierge-mute`
-
-删掉文件即可恢复。注意：**只有 SessionStart 契约会响应 mute 文件**；prompt-based hooks（UserPromptSubmit / Stop）若需关闭，请在 Claude Code 的 `/plugins` 里禁用整个插件。
+| 范围 | 操作 |
+|------|------|
+| 仅自动简报 | 编辑 `~/.concierge/config.json` 把 `briefEnabled` 设为 `false` |
+| 全部功能（全局） | `touch ~/.concierge-mute` |
+| 全部功能（项目级） | 项目根目录 `touch .concierge-mute` |
 
 ## 工程结构
 
 ```
 concierge/
-├── .claude-plugin/plugin.json          # 插件清单
-├── hooks/hooks.json                    # 注册 SessionStart + UserPromptSubmit + Stop
-├── hooks-handlers/session-start.sh     # SessionStart hook 执行的脚本
-├── prompts/                            # prompt 源文件（人类可读，可编辑）
-│   ├── secretary-contract.md           #   SessionStart 注入的契约
-│   ├── intent-clarifier.md             #   UserPromptSubmit 的评估 prompt
-│   └── cognitive-guardian.md           #   Stop 的评估 prompt
-├── scripts/sync-prompts.sh             # 把 prompts/*.md 同步到 hooks.json
-├── docs/                               # 设计文档、安装指南
-└── skills/                             # /sec * 命令（阶段 3 占位）
+├── .claude-plugin/plugin.json
+├── hooks/hooks.json                    # 3 个 hook 的注册
+├── hooks-handlers/
+│   ├── session-start.sh                # 注入契约 + 首次配置提示
+│   └── stop-digest.sh                  # Stop 旁路：读 transcript → 调 digest → 输出 systemMessage
+├── prompts/
+│   ├── secretary-contract.md           # 轻量契约 (SessionStart 注入)
+│   ├── intent-clarifier.md             # UserPromptSubmit 评估 prompt
+│   └── digest-system.md                # 秘书简报的 system prompt
+├── scripts/
+│   ├── digest.sh                       # 共享的 LLM 调用后端 (curl OpenAI-compatible)
+│   └── sync-prompts.sh                 # prompts/*.md → hooks.json
+├── skills/
+│   ├── sec-brief/SKILL.md              # /sec-brief 手动简报
+│   └── sec-setup/SKILL.md              # /sec-setup 配置向导
+└── docs/                               # 设计文档
 ```
 
 ## 路线图
 
-- [x] 阶段 1：契约骨架 — SessionStart 注入
-- [x] 阶段 2：双向拦截 — UserPromptSubmit + Stop hook
-- [ ] 阶段 3：主动能力 — `/sec optimize`、`/sec brief`、`/sec mute`
-- [ ] 阶段 4：学习闭环 — Memory 个性化
+- [x] **v0.1.0** — SessionStart 契约骨架
+- [x] **v0.2.x** — UserPromptSubmit + 旧 Stop 守门 + 📋 标记
+- [x] **v0.3.0** — 移除 rewrite-Stop，改为旁路简报；契约瘦身
+- [ ] **v0.4.x** — Memory 个性化（学习偏好、累积纠正）
+- [ ] **v0.5.x** — `.concierge-priorities` 优先级文件（注入 Boss 的"在意/不在意"清单）
 
 详见 [docs/design.md](docs/design.md)。
 
 ## 依赖
 
-- `bash`
-- `jq`（多数 Linux/macOS 默认装好；`sync-prompts.sh` 需要）
+- `bash`、`jq`、`curl`
+- 一个 OpenAI-compatible LLM endpoint + API key（OpenAI / DeepSeek / OpenRouter / 任意兼容代理）
 
-## 已知限制（v0.2.0）
+## 已知约束
 
-1. **Stop hook 返工循环风险** — 当前用 prompt 内置的"看上轮是否同因被打回则放行"规则做软兜底；尚无硬性次数上限。若发现循环，临时禁用插件。
-2. **UserPromptSubmit 改写边界** — 当前实现是注入 `systemMessage` 作为"秘书小抄"，**不修改用户原文**。是否能真正改写原文待后续验证。
-3. **响应延迟** — 每轮回复结束会多 5-30 秒（Stop hook 评估）。对一次性短问答会感觉笨拙，未来需按输出长度门控。
+- **Stop hook 自动简报渲染依赖 Claude Code ≥ 2.1.114** 的 full-schema systemMessage 行为（见 [issue #50542](https://github.com/anthropics/claude-code/issues/50542)）
+- 简报触发后增加约 1-3 秒延迟（取决于你选的 model 速度）
+- 每条 Claude 回复都会消耗一次 LLM 调用 — 用便宜的模型（Haiku、gpt-4o-mini、deepseek-chat）控制成本

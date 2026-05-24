@@ -160,12 +160,34 @@ Layer A: 契约层 (Hooks)           ← 始终在线
 - `hooks-handlers/session-start.sh` 注入契约
 - `prompts/secretary-contract.md` 契约内容（用户可编辑）
 
-### 阶段 2（已完成 v0.2.0）— 双向拦截
-- `UserPromptSubmit` prompt-hook：意图澄清器（`prompts/intent-clarifier.md`）
-- `Stop` prompt-hook：认知守门员（`prompts/cognitive-guardian.md`）
-- `scripts/sync-prompts.sh`：把 prompt 源文件同步到 hooks.json
-- prompt 体内置软性"防死循环"规则（看上轮同因被打回则放行）
-- **已知限制**：尚无硬性返工次数上限；UserPromptSubmit 只注入 systemMessage 不改写用户原文
+### 阶段 2（已完成 v0.2.x）— 双向拦截（旧设计 / 已废弃部分）
+- `UserPromptSubmit` prompt-hook：意图澄清器（**v0.3.0 保留**）
+- `Stop` prompt-hook：认知守门员（**v0.3.0 已移除** — 强制 rewrite 净负）
+- 📋 标记（**v0.3.0 保留**）
+
+### 阶段 3（已完成 v0.3.0）— 旁路秘书简报
+- **架构转向**：从"调整 Claude 原输出"转为"在 Claude 输出之后独立追加"
+  - 触发：[Issue #50542](https://github.com/anthropics/claude-code/issues/50542) 评论里发现 full-schema `{continue, suppressOutput, systemMessage}` 可以持久渲染独立 Line
+  - 用户实测确认 workaround 在 v2.1.150 上工作
+- **Stop hook 类型从 prompt 改为 command**：
+  - 读 `transcript_path`，提取最后一条 assistant 消息
+  - 调 `scripts/digest.sh`（curl OpenAI-compatible endpoint）生成简报
+  - 用 full-schema systemMessage 渲染到用户聊天流
+  - Claude 原始 token 输出**完全不动**
+- **简报格式**：`📋 结论 / 建议 / TL;DR` 三段，由独立 LLM 用 `prompts/digest-system.md` 这个 system prompt 生成
+- **契约瘦身**：移除"答案前置"、"凡多选必推荐"两条会切断 chain-of-thought 的硬规则
+- **新增 skills**：
+  - `/sec-setup` — AskUserQuestion 引导填配置，写入 `~/.concierge/config.json`
+  - `/sec-brief` — 手动调用简报，复用同一个 digest 后端
+- **配置文件**：`~/.concierge/config.json`（不在 plugin cache 内，免被 update 清掉）
+
+### 阶段 4（未做 v0.4.x）— Memory 个性化
+- 累积用户偏好、修正、领域词汇
+- 让简报根据 Boss 风格自适应
+
+### 阶段 5（未做 v0.5.x）— 优先级文件
+- `.concierge-priorities` 列 Boss 在意 / 不在意的事
+- 注入到 digest system prompt，让简报对照"Boss 关心的事"做高亮
 
 ### 阶段 3 — 主动能力
 - `/sec optimize`、`/sec brief`、`/sec mute` 三个 skill
