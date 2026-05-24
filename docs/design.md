@@ -165,6 +165,35 @@ Layer A: 契约层 (Hooks)           ← 始终在线
 - `Stop` prompt-hook：认知守门员（**v0.3.0 已移除** — 强制 rewrite 净负）
 - 📋 标记（**v0.3.0 保留**）
 
+### 阶段 4（已完成 v0.4.0）— 双向翻译 + 优先级个性化
+
+**触发洞察（用户提出）：** 真秘书有 5 个核心职能 (Gatekeeping / Briefing / Translation / Memory / Anticipation)，v0.3.x 只做了 Briefing 一项。Translation 缺一半（输入侧 Boss → Expert 没做），这导致 Claude 4.x 字面执行习惯下 Boss 的口语化输入无法激活 Claude 的深度推理。
+
+**v0.4.0 关键变化：**
+
+1. **入口翻译（UserPromptSubmit）从 prompt-type 改为 command-type**
+   - 旧版只做意图澄清，新版调独立 LLM 把 Boss 的口语化输入翻译成结构化 XML 笔记
+   - 翻译内容：`<task> <context> <constraints> <success_criteria> <priority_lens> <thinking_mode>`
+   - 仅对 COMPLEX 类型的输入生成翻译，TRIVIAL/STANDARD 返回 NONE 静默跳过
+   - 30 字符以下输入走廉价启发式直接跳过，不调 LLM
+
+2. **`~/.concierge/priorities.md` 优先级文件**
+   - 自由编辑的 markdown，Boss 写"我在意/不在意/决策风格/项目上下文"
+   - 入口翻译 + 出口简报两端都读，统一驱动个性化
+   - 项目级覆盖：`<项目根>/.concierge-priorities.md` 追加到全局之后
+
+3. **共享 LLM 调用后端 `scripts/llm-call.sh`**
+   - 单点维护的 curl OpenAI-compatible 调用
+   - 同时被 digest.sh（出口简报）和 improve-prompt.sh（入口翻译）使用
+
+4. **数字签名：3 个 hook 全部 command-type**
+   - 不再用 prompt-type hook（v0.2.x 时用过，schema 验证麻烦）
+   - 所有 prompt 内容在 `prompts/` 下，由 script 运行时读取
+
+5. **新增 skill `/sec-priorities`** — 创建 / 查看 / 编辑优先级文件
+
+6. **配置文件 schema 扩展**：新增 `improverEnabled`（默认 true）、`improverMinChars`（默认 30）
+
 ### 阶段 3（已完成 v0.3.0）— 旁路秘书简报
 - **架构转向**：从"调整 Claude 原输出"转为"在 Claude 输出之后独立追加"
   - 触发：[Issue #50542](https://github.com/anthropics/claude-code/issues/50542) 评论里发现 full-schema `{continue, suppressOutput, systemMessage}` 可以持久渲染独立 Line

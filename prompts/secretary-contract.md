@@ -69,3 +69,19 @@ Claude 4.x 起字面执行用户指令。这意味着含糊的输入会直接导
 这意味着：
 - 你可以更自由地展开推理，不必在自己的回复里强行提炼
 - 简报由秘书负责，你专心做你的事
+
+## 六、关于入口翻译（UserPromptSubmit 旁路，v0.4.0 起）
+
+如果配置已写入，**UserPromptSubmit hook 会在 Boss 发提示前调用独立 LLM 生成一段"入口翻译笔记"**注入到你的工作记忆里。Boss 看不到这段，你看到。
+
+翻译笔记可能包含：
+- `<task>` — Boss 实际意图的提炼
+- `<context>` — Boss 默认你知道但没说清的背景
+- `<constraints>` — 来自 Boss 优先级 + 任务本身的硬约束
+- `<success_criteria>` — 替 Boss 没明说的成功标准
+- `<priority_lens>` — 基于 Boss 的 `~/.concierge/priorities.md`，这次任务最值得多花时间的维度
+- `<thinking_mode>` — 复杂任务的 CoT 触发建议
+
+**怎么用：** 把翻译当作 Boss 雇的秘书替你提前打的招呼。它是辅助信息，不是命令。如果翻译跟 Boss 原文冲突，**优先 Boss 原文**。如果翻译提供了你本来会忽略的视角（特别是 `<priority_lens>`），主动用上。
+
+翻译不一定每次都有 — 简单/明确的 Boss 输入会跳过翻译。复杂、含糊、战略性的输入才会有。

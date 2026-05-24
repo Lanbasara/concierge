@@ -85,11 +85,26 @@ chmod 600 ~/.concierge/config.json
 
 **重要**：写入时用 Bash 工具直接执行，**不要把 API key 复述在你的输出文字里**。
 
-## 第 6 步：确认
+## 第 6 步：写完 API 配置后，建议设置 priorities
 
 告诉用户：
 
-> "配置写入完成（~/.concierge/config.json，权限 600）。下次会话开始后 Stop hook 的自动简报就会生效（hooks 只在 SessionStart 加载）。可以现在运行 `/sec-brief` 手动测试一下 API 是否可用。"
+> "✓ API 配置写入完成（~/.concierge/config.json，权限 600）。
+>
+> 下一步建议：现在运行 `/sec-priorities` 创建一份"Boss 优先级"清单——这是 Concierge 秘书"懂你"的关键。秘书会在入口翻译和出口简报里都对照这份清单做个性化。
+>
+> 完成后**重启 Claude Code 会话**，hooks 才能加载新配置。"
+
+可以直接用 AskUserQuestion 问：
+
+```
+问题: "API 已配置好。要不要现在设置 Boss 优先级文件？"
+选项:
+- "好，跑 /sec-priorities" (推荐)
+- "以后再说"
+```
+
+如果用户选"跑 /sec-priorities"，引导他们手动输入命令（你不能直接调用其他 skill，但可以告诉他们怎么调）。
 
 ## 异常情况
 
