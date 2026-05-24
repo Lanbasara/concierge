@@ -1,6 +1,6 @@
 {
   "name": "concierge",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Claude Code 的秘书层 — 双向翻译输入与输出，基于人类认知科学优化对话体验",
   "author": {
     "name": "ubuntu"
