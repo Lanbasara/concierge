@@ -1,0 +1,11 @@
+# 本地静音标记
+.concierge-mute
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# 日志
+*.log
