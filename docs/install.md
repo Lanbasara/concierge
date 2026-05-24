@@ -1,6 +1,18 @@
 # 安装与启用
 
-## 方式一：作为本地插件加载（推荐）
+## 方式一：通过 marketplace 安装（推荐）
+
+如果你已经添加过 `lanbasara` marketplace（`Lanbasara/unleash-marketplace`），直接在 Claude Code 里：
+
+```
+/plugins
+→ 选择 lanbasara
+→ install concierge
+```
+
+安装后**重启会话**生效。
+
+## 方式二：作为本地插件加载
 
 Claude Code 支持从本地目录加载插件。在你的 Claude Code 配置中把 `~/concierge` 添加为本地插件源。
 

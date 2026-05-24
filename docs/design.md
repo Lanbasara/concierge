@@ -154,16 +154,18 @@ Layer A: 契约层 (Hooks)           ← 始终在线
 
 ## 七、阶段路线
 
-### 阶段 1（已完成）— 契约骨架
+### 阶段 1（已完成 v0.1.0）— 契约骨架
 - `.claude-plugin/plugin.json`
 - `hooks/hooks.json` 注册 SessionStart
 - `hooks-handlers/session-start.sh` 注入契约
 - `prompts/secretary-contract.md` 契约内容（用户可编辑）
 
-### 阶段 2 — 双向拦截
-- `UserPromptSubmit` prompt-hook：意图澄清器
-- `Stop` prompt-hook：认知守门员（先 3 条最严重的规则）
-- 演示 walkthrough：对比拦截前后
+### 阶段 2（已完成 v0.2.0）— 双向拦截
+- `UserPromptSubmit` prompt-hook：意图澄清器（`prompts/intent-clarifier.md`）
+- `Stop` prompt-hook：认知守门员（`prompts/cognitive-guardian.md`）
+- `scripts/sync-prompts.sh`：把 prompt 源文件同步到 hooks.json
+- prompt 体内置软性"防死循环"规则（看上轮同因被打回则放行）
+- **已知限制**：尚无硬性返工次数上限；UserPromptSubmit 只注入 systemMessage 不改写用户原文
 
 ### 阶段 3 — 主动能力
 - `/sec optimize`、`/sec brief`、`/sec mute` 三个 skill
