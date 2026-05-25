@@ -1,7 +1,7 @@
 {
   "name": "concierge",
-  "version": "0.4.0",
-  "description": "Claude Code 的秘书层 — 双向翻译。Boss 写一份 priorities.md 表达在意/不在意什么；秘书在入口把 Boss 的口语翻译成结构化笔记（XML + 成功标准 + CoT 触发），在出口把 Claude 的回复压成 3 段简报（结论/建议/TL;DR），全部按 Boss 优先级个性化。Claude 原文 0 修改。",
+  "version": "0.4.1",
+  "description": "Claude Code 的秘书层 — 双向翻译。Boss 写一份 priorities.md 表达在意/不在意什么；秘书在入口把 Boss 的口语翻译成结构化笔记（XML + 成功标准 + CoT 触发），在出口把 Claude 的回复按内容类型生成简报（动作/决策/警告/完成/FYI），priorities 触及时显式 tie-back。Claude 原文 0 修改。",
   "author": {
     "name": "ubuntu"
   }
