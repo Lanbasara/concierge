@@ -23,6 +23,7 @@ log() {
 
 SYSTEM_PROMPT="${1:-}"
 USER_CONTENT="${2:-}"
+TEMPERATURE="${3:-0.3}"  # 可选第三参数：温度。default 0.3 (确定性高)。digest 用 0.5 (允许判断)。
 
 if [ -z "$SYSTEM_PROMPT" ] || [ -z "$USER_CONTENT" ]; then
   log "missing args (system='${SYSTEM_PROMPT:0:30}', user='${USER_CONTENT:0:30}')"
@@ -58,13 +59,14 @@ payload=$(jq -n \
   --arg model "$model" \
   --arg sys "$SYSTEM_PROMPT" \
   --arg msg "$USER_CONTENT" \
+  --argjson temp "$TEMPERATURE" \
   '{
     model: $model,
     messages: [
       {role: "system", content: $sys},
       {role: "user", content: $msg}
     ],
-    temperature: 0.3
+    temperature: $temp
   }')
 
 response=$(curl -sS --max-time 30 \

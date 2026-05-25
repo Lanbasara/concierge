@@ -105,8 +105,8 @@ else
   user_content="$message"
 fi
 
-# 调共享 LLM 后端
-content=$(bash "${SCRIPT_DIR}/llm-call.sh" "$system_prompt" "$user_content" 2>>"$LOG")
+# 调共享 LLM 后端，温度调到 0.5 给秘书一点判断空间（v0.4.2+）
+content=$(bash "${SCRIPT_DIR}/llm-call.sh" "$system_prompt" "$user_content" 0.5 2>>"$LOG")
 llm_exit=$?
 
 if [ $llm_exit -ne 0 ]; then
